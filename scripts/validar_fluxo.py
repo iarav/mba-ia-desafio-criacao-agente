@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import os
-import signal
 import subprocess
 import sys
 import time
@@ -50,7 +49,9 @@ def iniciar_servidor() -> subprocess.Popen:
 
 
 def parar_servidor(proc: subprocess.Popen) -> None:
-    proc.send_signal(signal.SIGINT)
+    # `terminate()` funciona no Windows (TerminateProcess) e no Unix (SIGTERM);
+    # `signal.SIGINT` não existe no Windows.
+    proc.terminate()
     try:
         proc.wait(timeout=10)
     except subprocess.TimeoutExpired:

@@ -10,6 +10,15 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+# Faz o Python confiar nos certificados do sistema operacional (Keychain no
+# macOS, cert store no Windows, /etc/ssl no Linux). Necessário em redes com
+# inspeção SSL corporativa (ex.: proxy com CA próprio), onde o bundle do
+# certifi não contém o CA interno. Em ambiente limpo é inócuo.
+try:
+    import pip_system_certs  # noqa: F401
+except Exception:  # pragma: no cover - nunca deve impedir a subida
+    pass
+
 from dotenv import load_dotenv
 
 # Carrega `.env` se existir (fora do Git). Não falha se ausente.

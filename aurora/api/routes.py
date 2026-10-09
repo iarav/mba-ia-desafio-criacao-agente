@@ -28,6 +28,8 @@ async def enviar_mensagem(session_id: str, body: EnviarMensagemRequest) -> Respo
         resultado = await runtime.enviar_mensagem(session_id, body.texto)
     except runtime.SessaoNaoEncontrada:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    except Exception as exc:  # ex.: 429 do Gemini (quota/rate limit)
+        raise HTTPException(status_code=500, detail=f"Erro interno: {exc}")
     return RespostaConversa(**resultado)
 
 
@@ -43,6 +45,8 @@ async def responder_confirmacao(
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
     except runtime.ConfirmacaoNaoEncontrada:
         raise HTTPException(status_code=409, detail="Confirmação inexistente ou já respondida.")
+    except Exception as exc:  # ex.: 429 do Gemini (quota/rate limit)
+        raise HTTPException(status_code=500, detail=f"Erro interno: {exc}")
     return RespostaConversa(**resultado)
 
 

@@ -52,15 +52,15 @@ Ações que geram cobrança (reservar área com taxa) ou liberam acesso (visitan
 ficam pendentes até a rota de confirmações.
 
 - `criar_reserva` pede confirmação **somente** quando a área tem taxa
-  ([`aurora/tools/reservas.py`](aurora/tools/reservas.py#L44) → `tool_context.request_confirmation`); a
+  ([`aurora/tools/reservas.py`](aurora/tools/reservas.py#L58) → `tool_context.request_confirmation`); a
   quadra (taxa 0) grava direto, sem confirmação.
 - `autorizar_visitante` sempre pede confirmação
-  ([`aurora/tools/visitantes.py`](aurora/tools/visitantes.py#L19)).
-- A retomada está em [`aurora/runtime.py`](aurora/runtime.py#L135): ao responder a
+  ([`aurora/tools/visitantes.py`](aurora/tools/visitantes.py#L23)).
+- A retomada está em [`aurora/runtime.py`](aurora/runtime.py#L139): ao responder a
   confirmação, a API devolve um `FunctionResponse` do `adk_request_confirmation`
   ao Runner, que re-executa a tool exatamente uma vez. Reenvio do mesmo id ou id
   inexistente recebe `409` (a pendência é removida antes da retomada).
-- A rota está em [`aurora/api/routes.py`](aurora/api/routes.py#L39).
+- A rota está em [`aurora/api/routes.py`](aurora/api/routes.py#L36).
 
 Por que não depende do modelo: a pendência nasce de `request_confirmation`
 (mecanismo do ADK, não de uma instrução), a ação só executa quando
@@ -73,21 +73,21 @@ nada.
 O apartamento é definido **uma vez**, na criação da sessão, e fica no estado da
 sessão.
 
-- [`aurora/runtime.py`](aurora/runtime.py#L97) grava `state={"apartamento": ...}` ao criar a sessão.
+- [`aurora/runtime.py`](aurora/runtime.py#L115) grava `state={"apartamento": ...}` ao criar a sessão.
 - As tools leem o apartamento de `tool_context.state["apartamento"]`
-  ([`aurora/tools/reservas.py`](aurora/tools/reservas.py#L25), [`aurora/tools/visitantes.py`](aurora/tools/visitantes.py#L20)).
+  ([`aurora/tools/reservas.py`](aurora/tools/reservas.py#L26), [`aurora/tools/visitantes.py`](aurora/tools/visitantes.py#L20)).
 - **Nenhuma tool tem parâmetro `apartamento`**: o modelo não escolhe o
   apartamento; ele vem da sessão e é validado por construção.
 - Disponibilidade devolve só `livre`/`ocupada`, nunca o dono
   ([`aurora/tools/reservas.py`](aurora/tools/reservas.py#L30)); cancelamento só
-  age sobre reservas do próprio apartamento ([`aurora/storage/reservas.py`](aurora/storage/reservas.py#L59)).
+  age sobre reservas do próprio apartamento ([`aurora/storage/reservas.py`](aurora/storage/reservas.py#L53)).
 
 ### Garantia 3 — nada se perde no reinício
 
 A sessão é persistida em SQLite pelo próprio ADK, e os dados do condomínio em
 SQLite.
 
-- [`aurora/agents/build.py`](aurora/agents/build.py#L126) usa `SqliteSessionService` (arquivo
+- [`aurora/agents/build.py`](aurora/agents/build.py#L142) usa `SqliteSessionService` (arquivo
   `data/sessoes.db`), então os eventos sobrevivem ao reinício da API.
 - Reservas e visitantes ficam em `data/condominio.db`
   ([`aurora/storage/db.py`](aurora/storage/db.py)).
@@ -98,7 +98,7 @@ O regulamento nunca entra nas instruções do agente principal, e a tool devolve
 só o capítulo do assunto.
 
 - O principal não menciona o regulamento em `instruction`
-  ([`aurora/agents/build.py`](aurora/agents/build.py#L105)).
+  ([`aurora/agents/build.py`](aurora/agents/build.py#L95)).
 - [`aurora/tools/regulamento.py`](aurora/tools/regulamento.py#L37) divide o arquivo por capítulo e
   retorna apenas o(s) capítulo(s) que tratam do `assunto` — nenhum evento carrega
   capítulos de outros temas.
@@ -107,9 +107,9 @@ só o capítulo do assunto.
 
 A exclusividade vale **no instante da gravação**, não numa conferência anterior.
 
-- Índice único parcial em [`aurora/storage/db.py`](aurora/storage/db.py#L31):
+- Índice único parcial em [`aurora/storage/db.py`](aurora/storage/db.py#L38):
   `UNIQUE (area, data) WHERE ativa = 1`.
-- [`aurora/storage/reservas.py`](aurora/storage/reservas.py#L29) faz o `INSERT` e converte o
+- [`aurora/storage/reservas.py`](aurora/storage/reservas.py#L24) faz o `INSERT` e converte o
   `IntegrityError` de concorrência em `{"status": "indisponivel"}` (resposta
   normal), enquanto o código é chave primária e nunca repete (regra 5).
 
@@ -137,6 +137,10 @@ cp .env.example .env
 
 A chave **nunca** é versionada: `.env` está no `.gitignore` e `.env.example`
 lista só os nomes das variáveis.
+
+> **Redes corporativas**: o projeto inclui [`pip-system-certs`](https://pypi.org/project/pip-system-certs/),
+> que faz o Python confiar nos certificados do sistema operacional (necessário
+> quando há inspeção SSL com CA próprio). Em ambiente limpo é inócuo.
 
 ### Instalar dependências
 
